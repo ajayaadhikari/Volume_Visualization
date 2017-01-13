@@ -58,12 +58,37 @@ public class Volume {
                 || coord[2] < 0 || coord[2] > (dimZ-1)) {
             return 0;
         }
-        /* notice that in this framework we assume that the distance between neighbouring voxels is 1 in all directions*/
-        int x = (int) Math.round(coord[0]); 
-        int y = (int) Math.round(coord[1]);
-        int z = (int) Math.round(coord[2]);
-    
-        return getVoxel(x, y, z);
+        
+        // Compute the ceil and floor of the given coordinates in all dimensions
+        double x0 = Math.floor(coord[0]);
+        double x1 = Math.ceil(coord[0]);
+        double y0 = Math.floor(coord[1]);
+        double y1 = Math.ceil(coord[1]);
+        double z0 = Math.floor(coord[2]);
+        double z1 =  Math.ceil(coord[2]);
+        
+        // Compute the distance from the floor of the coordinate (d1) to the coordinate in all dimensions
+        // The distance between the surrounding voxels (d2) for each dimension is 1.
+        // So it is equal to the ratio between d1 and d2,
+        double x_ratio = (coord[0] - x0);
+        double y_ratio = (coord[1] - y0);
+        double z_ratio = (coord[2] - z0);
+        
+        double c00 = getVoxel((int) x0, (int) y0, (int) z0) * (1 - x_ratio) +
+                     getVoxel((int) x1, (int) y0, (int) z0) * x_ratio;
+        double c01 = getVoxel((int) x0, (int) y0, (int) z1) * (1 - x_ratio) +
+                     getVoxel((int) x1, (int) y0, (int) z1) * x_ratio;
+        double c10 = getVoxel((int) x0, (int) y1, (int) z0) * (1 - x_ratio) +
+                     getVoxel((int) x1, (int) y1, (int) z0) * x_ratio;
+        double c11 = getVoxel((int) x0, (int) y1, (int) z1) * (1 - x_ratio) +
+                     getVoxel((int) x1, (int) y1, (int) z1) * x_ratio;
+        
+        double c0 = c00 * (1 - y_ratio) + c10 * y_ratio;
+        double c1 = c01 * (1 - y_ratio) + c11 * y_ratio;
+        
+        double result = c0 * (1 - z_ratio) + c1 * z_ratio;
+        
+        return (short)result;
         
     }
     
