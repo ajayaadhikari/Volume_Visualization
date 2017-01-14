@@ -34,8 +34,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     TransferFunction tFunc;
     TransferFunctionEditor tfEditor;
     TransferFunction2DEditor tfEditor2D;
-    private boolean mipMode = false;
-    private boolean slicerMode = true;
+    private boolean mipMode = true;
+    private boolean slicerMode = false;
     private boolean compositingMode = false;
     private boolean tf2dMode = false;
     private boolean shadingMode = false;
@@ -172,6 +172,18 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
     }
     
+    /**
+     * 
+     * @param plane_pos
+     * @param plane_normal
+     * @param line_pos
+     * @param line_dir
+     * @param intersection
+     * @return 
+     * 
+     * Find out whether the plane perpendicular to @plane_normal and going through @plane_pos intersects with the
+     * line given by @line_pos and @line_dir. If true fill in intersection and return true, else return false.
+     */
     private boolean intersectLinePlane(double[] plane_pos, double[] plane_normal,
             double[] line_pos, double[] line_dir, double[] intersection) {
 
@@ -195,6 +207,19 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         return true;
     }
 
+    /**
+     * 
+     * @param intersection
+     * @param xb
+     * @param xe
+     * @param yb
+     * @param ye
+     * @param zb
+     * @param ze
+     * @return 
+     * 
+     * Check whether the point @intersection falls into the cube specified by @xb, @xe, @yb, @ye, @zb and @ze.
+     */
     private boolean validIntersection(double[] intersection, double xb, double xe, double yb,
             double ye, double zb, double ze) {
 
@@ -203,7 +228,22 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 && ((zb - 0.5) <= intersection[2]) && (intersection[2] <= (ze + 0.5)));
 
     }
-
+    
+    /**
+     * 
+     * @param plane_pos
+     * @param plane_normal
+     * @param line_pos
+     * @param line_dir
+     * @param intersection
+     * @param entryPoint
+     * @param exitPoint 
+     * 
+     * Find out whether the plane perpendicular to @plane_normal and going through @plane_pos intersects with the
+     * line given by @line_pos and line_dir. If they @intersect, @entryPoint or @exitPoint is filled. @entrypoint is filled
+     * if @plane_normal and @line_dir have the same direction and @exitPoint is filled if @plane_normal and @line_dir have 
+     * opposite direction.
+     */
     private void intersectFace(double[] plane_pos, double[] plane_normal,
             double[] line_pos, double[] line_dir, double[] intersection,
             double[] entryPoint, double[] exitPoint) {
@@ -238,20 +278,44 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }
     }
     
+  
 
-      int traceRayMIP(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
+    int traceRayMIP(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
         /* to be implemented:  You need to sample the ray and implement the MIP
          * right now it just returns yellow as a color
         */
-         
-        int color=0;
-
-        color = (255 << 24) | (255 << 16) | (255 << 8); 
+        VectorMath.normalize(viewVec);
+        double totalDistance = VectorMath.distance(entryPoint, exitPoint);
+        int maxValue = 0;
+        for(double i = 0.0; true; i+=sampleStep){
+            double[] coordinate = VectorMath.add(exitPoint, VectorMath.scale(viewVec, i));
+            double distance = VectorMath.distance(exitPoint, coordinate);
+            
+            if (distance > totalDistance){
+                break;
+            }
+            
+            int currentValue = volume.getVoxelInterpolate(coordinate);
+            if (currentValue > maxValue){
+                maxValue = currentValue;
+            }
+        }
         
-        return color;
+        TFColor voxelColor = new TFColor(); 
+        voxelColor = tFunc.getColor(maxValue);
+
+
+        // BufferedImage expects a pixel color packed as ARGB in an int
+        int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
+        int c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
+        int c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
+        int c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
+        int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
+        return pixelColor;
     }
-   
     
+    
+
    
     void computeEntryAndExit(double[] p, double[] viewVec, double[] entryPoint, double[] exitPoint) {
 
@@ -353,7 +417,15 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
 
     }
-
+    
+    /**
+     * 
+     * @param viewMatrix: This varaible contains the direction of the viewpoint, and the direction of the plane
+     *                    perpendicular to it.
+     * Visualize a slice throught the middelpoint of the volume. This plane has the same direction as the plane
+     * perpendular to the direction of the viewpoint.
+     * 
+     */
     void slicer(double[] viewMatrix) {
 
         // clear image
@@ -399,10 +471,10 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 voxelColor.a = val > 0 ? 1.0 : 0.0;  // this makes intensity 0 completely transparent and the rest opaque
                 
                 // Alternatively, apply the transfer function to obtain a color
-                /*TFColor auxColor = new TFColor(); 
+                TFColor auxColor = new TFColor(); 
                 auxColor = tFunc.getColor(val);
                 voxelColor.r=auxColor.r;voxelColor.g=auxColor.g;voxelColor.b=auxColor.b;voxelColor.a=auxColor.a;
-                */
+                
                 
                 // BufferedImage expects a pixel color packed as ARGB in an int
                 int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;

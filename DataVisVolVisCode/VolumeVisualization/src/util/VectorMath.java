@@ -46,5 +46,21 @@ public class VectorMath {
         return Math.sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
     }
     
+    public static double[] scale(double[] vector, double scale) {
+        double[] tmp = new double[3];
+        setVector(tmp, vector[0] + vector[0]*scale, vector[1] + vector[1]*scale, vector[2] + vector[2]*scale);
+        return tmp;
+    }
+   
+    public static void normalize(double[] vector) {
+        double length = length(vector);
+        setVector(vector, vector[0]/length , vector[1]/length, vector[2]/length);
+    }
+    
+    public static double[] add(double[] v1, double[] v2) {
+        double[] tmp = new double[3];
+        setVector(tmp, v1[0]+v2[0], v1[1]+v2[1], v1[2]+v2[2]);
+        return tmp;
+    } 
 
 }
