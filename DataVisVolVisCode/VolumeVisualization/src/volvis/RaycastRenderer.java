@@ -400,7 +400,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                     //System.out.println("Entry: " + entryPoint[0] + " " + entryPoint[1] + " " + entryPoint[2]);
                     //System.out.println("Exit: " + exitPoint[0] + " " + exitPoint[1] + " " + exitPoint[2]);
                     int pixelColor = 0;
-                                   
+                    computeEntryAndExit(pixelCoord, viewVec, entryPoint, exitPoint);
                     /* set color to green if MipMode- see slicer function*/
                    if(mipMode) 
                         pixelColor= traceRayMIP(entryPoint,exitPoint,viewVec,sampleStep);
