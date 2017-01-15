@@ -34,9 +34,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     TransferFunction tFunc;
     TransferFunctionEditor tfEditor;
     TransferFunction2DEditor tfEditor2D;
-    private boolean mipMode = true;
+    private boolean mipMode = false;
     private boolean slicerMode = false;
-    private boolean compositingMode = false;
+    private boolean compositingMode = true;
     private boolean tf2dMode = false;
     private boolean shadingMode = false;
     
@@ -265,7 +265,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
             if (validIntersection(intersection, xpos0, xpos1, ypos0, ypos1,
                     zpos0, zpos1)) {
-                if (VectorMath.dotproduct(line_dir, plane_normal) > 0) {
+                if (VectorMath.dotproduct(line_dir, plane_normal) < 0) {
                     entryPoint[0] = intersection[0];
                     entryPoint[1] = intersection[1];
                     entryPoint[2] = intersection[2];
@@ -287,9 +287,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         VectorMath.normalize(viewVec);
         double totalDistance = VectorMath.distance(entryPoint, exitPoint);
         int maxValue = 0;
+        // Raycast through the volume starting from @entryPoint and ending at @exitPoint along the direction
+        // given by @viewVec with @sampleStep as sampling rate.
         for(double i = 0.0; true; i+=sampleStep){
-            double[] coordinate = VectorMath.add(exitPoint, VectorMath.scale(viewVec, i));
-            double distance = VectorMath.distance(exitPoint, coordinate);
+            double[] coordinate = VectorMath.add(entryPoint, VectorMath.scale(viewVec, i));
+            double distance = VectorMath.distance(entryPoint, coordinate);
             
             if (distance > totalDistance){
                 break;
@@ -301,9 +303,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             }
         }
         
+        // Get the color of @maxValue
         TFColor voxelColor = new TFColor(); 
         voxelColor = tFunc.getColor(maxValue);
-
 
         // BufferedImage expects a pixel color packed as ARGB in an int
         int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
@@ -397,14 +399,15 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
                 computeEntryAndExit(pixelCoord, viewVec, entryPoint, exitPoint);
                 if ((entryPoint[0] > -1.0) && (exitPoint[0] > -1.0)) {
-                    //System.out.println("Entry: " + entryPoint[0] + " " + entryPoint[1] + " " + entryPoint[2]);
-                    //System.out.println("Exit: " + exitPoint[0] + " " + exitPoint[1] + " " + exitPoint[2]);
                     int pixelColor = 0;
-                    computeEntryAndExit(pixelCoord, viewVec, entryPoint, exitPoint);
                     /* set color to green if MipMode- see slicer function*/
-                   if(mipMode) 
+                   if(mipMode) {
                         pixelColor= traceRayMIP(entryPoint,exitPoint,viewVec,sampleStep);
-                                
+                   }
+                   else if(compositingMode) {
+                       pixelColor = composite(entryPoint,exitPoint,viewVec, sampleStep);
+                   }
+                      
                     for (int ii = i; ii < i + increment; ii++) {
                         for (int jj = j; jj < j + increment; jj++) {
                             image.setRGB(ii, jj, pixelColor);
@@ -417,6 +420,40 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
 
     }
+    
+    int composite(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
+
+        VectorMath.normalize(viewVec);
+        double totalDistance = VectorMath.distance(entryPoint, exitPoint);
+        TFColor currentColor = new TFColor(); 
+        TFColor previousColor = new TFColor();
+        // Raycast through the volume starting from @exitPoint and ending at @entryPoint along the direction
+        // given by @viewVec with @sampleStep as sampling rate.
+        // We are sampeling back to front here.
+        for(double i = 0.0; true; i-=sampleStep){
+            double[] coordinate = VectorMath.add(exitPoint, VectorMath.scale(viewVec, i));
+            double distance = VectorMath.distance(exitPoint, coordinate);
+            
+            if (distance > totalDistance){
+                break;
+            }
+            
+            int currentValue = volume.getVoxelInterpolate(coordinate);
+            currentColor = tFunc.getColor(currentValue);
+            previousColor.r = currentColor.a*currentColor.r + (1-currentColor.a) * previousColor.r;
+            previousColor.g = currentColor.a*currentColor.g + (1-currentColor.a) * previousColor.g;
+            previousColor.b = currentColor.a*currentColor.b + (1-currentColor.a) * previousColor.b;
+        }
+        previousColor.a = 1.0;
+
+        // BufferedImage expects a pixel color packed as ARGB in an int
+        int c_alpha = previousColor.a <= 1.0 ? (int) Math.floor(previousColor.a * 255) : 255;
+        int c_red = previousColor.r <= 1.0 ? (int) Math.floor(previousColor.r * 255) : 255;
+        int c_green = previousColor.g <= 1.0 ? (int) Math.floor(previousColor.g * 255) : 255;
+        int c_blue = previousColor.b <= 1.0 ? (int) Math.floor(previousColor.b * 255) : 255;
+        int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
+        return pixelColor;
+    }    
     
     /**
      * 
