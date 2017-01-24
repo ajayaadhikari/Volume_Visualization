@@ -51,8 +51,6 @@ public class Volume {
     }
     
     public short getVoxelInterpolate(double[] coord) {
-    /* to be implemented: get the trilinear interpolated value. 
-        The current implementation gets the Nearest Neightbour */
         
         if (coord[0] < 0 || coord[0] > (dimX-1) || coord[1] < 0 || coord[1] > (dimY-1)
                 || coord[2] < 0 || coord[2] > (dimZ-1)) {
@@ -109,19 +107,21 @@ public class Volume {
     }
 
     public short getMinimum() {
-        short minimum = data[0];
-        for (int i=0; i<data.length; i++) {
-            minimum = data[i] < minimum ? data[i] : minimum;
+        if (this.minimum == -1){
+            for (int i=0; i<data.length; i++) {
+                this.minimum = data[i] < this.minimum ? data[i] : this.minimum;
+            }  
         }
-        return minimum;
+        return this.minimum;
     }
 
     public short getMaximum() {
-        short maximum = data[0];
-        for (int i=0; i<data.length; i++) {
-            maximum = data[i] > maximum ? data[i] : maximum;
+        if (this.maximum == -1){
+            for (int i=0; i<data.length; i++) {
+                this.maximum = data[i] > this.maximum ? data[i] : this.maximum;
+            } 
         }
-        return maximum;
+        return this.maximum;
     }
  
     public int[] getHistogram() {
@@ -138,4 +138,6 @@ public class Volume {
     private int dimX, dimY, dimZ;
     private short[] data;
     private int[] histogram;
+    private short minimum = -1;
+    private short maximum = -1;
 }

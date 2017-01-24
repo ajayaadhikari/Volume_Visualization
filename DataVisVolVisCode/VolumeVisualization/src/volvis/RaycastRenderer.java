@@ -35,8 +35,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     TransferFunctionEditor tfEditor;
     TransferFunction2DEditor tfEditor2D;
     private boolean mipMode = false;
-    private boolean slicerMode = false;
-    private boolean compositingMode = true;
+    private boolean slicerMode = true;
+    private boolean compositingMode = false;
     private boolean tf2dMode = false;
     private boolean shadingMode = false;
     
@@ -240,7 +240,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
      * @param exitPoint 
      * 
      * Find out whether the plane perpendicular to @plane_normal and going through @plane_pos intersects with the
-     * line given by @line_pos and line_dir. If they @intersect, @entryPoint or @exitPoint is filled. @entrypoint is filled
+     * line given by @line_pos and line_dir. If they intersect, @entryPoint or @exitPoint is filled. @entrypoint is filled
      * if @plane_normal and @line_dir have the same direction and @exitPoint is filled if @plane_normal and @line_dir have 
      * opposite direction.
      */
@@ -265,7 +265,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
             if (validIntersection(intersection, xpos0, xpos1, ypos0, ypos1,
                     zpos0, zpos1)) {
-                if (VectorMath.dotproduct(line_dir, plane_normal) < 0) {
+                if (VectorMath.dotproduct(line_dir, plane_normal) > 0) {
                     entryPoint[0] = intersection[0];
                     entryPoint[1] = intersection[1];
                     entryPoint[2] = intersection[2];
@@ -290,8 +290,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         // Raycast through the volume starting from @entryPoint and ending at @exitPoint along the direction
         // given by @viewVec with @sampleStep as sampling rate.
         for(double i = 0.0; true; i+=sampleStep){
-            double[] coordinate = VectorMath.add(entryPoint, VectorMath.scale(viewVec, i));
-            double distance = VectorMath.distance(entryPoint, coordinate);
+            double[] coordinate = VectorMath.add(exitPoint, VectorMath.scale(viewVec, i));
+            double distance = VectorMath.distance(exitPoint, coordinate);
             
             if (distance > totalDistance){
                 break;
@@ -376,6 +376,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double[] exitPoint = new double[3];
         
         int increment=1;
+        if (this.interactiveMode){
+            increment = 3;
+        }
         float sampleStep=0.2f;
         
 
@@ -430,7 +433,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         // Raycast through the volume starting from @exitPoint and ending at @entryPoint along the direction
         // given by @viewVec with @sampleStep as sampling rate.
         // We are sampeling back to front here.
-        for(double i = 0.0; true; i-=sampleStep){
+        for(double i = 0.0; true; i+=sampleStep){
             double[] coordinate = VectorMath.add(exitPoint, VectorMath.scale(viewVec, i));
             double distance = VectorMath.distance(exitPoint, coordinate);
             
