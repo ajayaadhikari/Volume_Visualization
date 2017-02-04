@@ -27,16 +27,6 @@ public class GradientVolume {
     public VoxelGradient getGradient(int x, int y, int z) {
         return data[x + dimX * (y + dimY * z)];
     }
-
-    private void interpolate(VoxelGradient g0, VoxelGradient g1, float factor, VoxelGradient result) {
-        /* To be implemented: this function linearly interpolates gradient vector g0 and g1 given the factor (t) 
-            the resut is given at result. You can use it to tri-linearly interpolate the gradient */
-        result.x  = g1.x * factor + g0.x * (1-factor);
-        result.y =  g1.y * factor + g0.y * (1-factor);
-        result.z =  g1.z * factor + g0.z * (1-factor);
-        
-        
-    }
     
     public VoxelGradient getGradientNN(double[] coord) {
         /* Nearest neighbour interpolation applied to provide the gradient */
@@ -51,15 +41,54 @@ public class GradientVolume {
         
         return getGradient(x, y, z);
     }
+    
+    private VoxelGradient interpolate(VoxelGradient g0, VoxelGradient g1, float factor) {
+        return new VoxelGradient(g1.x * factor + g0.x * (1-factor),
+                                 g1.y * factor + g0.y * (1-factor),
+                                 g1.z * factor + g0.z * (1-factor));
+    }
 
     
     public VoxelGradient getGradient(double[] coord) {
     /* To be implemented: Returns trilinear interpolated gradient based on the precomputed gradients. 
      *   Use function interpolate. Use getGradientNN as bases */
-
-        return getGradient(0, 0, 0);
-    }
+        if (coord[0] < 0 || coord[0] > (dimX-2) || coord[1] < 0 || coord[1] > (dimY-2)
+            || coord[2] < 0 || coord[2] > (dimZ-2)) {
+            return zero;
+        }
     
+        // Compute the ceil and floor of the given coordinates in all dimensions
+        double x0 = Math.floor(coord[0]);
+        double x1 = Math.ceil(coord[0]);
+        double y0 = Math.floor(coord[1]);
+        double y1 = Math.ceil(coord[1]);
+        double z0 = Math.floor(coord[2]);
+        double z1 =  Math.ceil(coord[2]);
+        
+        // Compute the distance from the floor of the coordinate (d1) to the coordinate in all dimensions
+        // The distance between the surrounding voxels (d2) for each dimension is 1.
+        // So it is equal to the ratio between d1 and d2,
+        float x_ratio = (float)(coord[0] - x0);
+        float y_ratio = (float)(coord[1] - y0);
+        float z_ratio = (float)(coord[2] - z0);
+        
+        VoxelGradient c00 = interpolate(getGradient((int) x0, (int) y0, (int) z0),
+                                        getGradient((int) x1, (int) y0, (int) z0),
+                                        x_ratio);
+        VoxelGradient c01 = interpolate(getGradient((int) x0, (int) y0, (int) z1),
+                                        getGradient((int) x1, (int) y0, (int) z1),
+                                        x_ratio);
+        VoxelGradient c10 = interpolate(getGradient((int) x0, (int) y1, (int) z0),
+                                        getGradient((int) x1, (int) y1, (int) z0),
+                                        x_ratio);
+        VoxelGradient c11 = interpolate(getGradient((int) x0, (int) y1, (int) z1),
+                                        getGradient((int) x1, (int) y1, (int) z1),
+                                        x_ratio);
+        VoxelGradient c0 = interpolate(c00, c10, y_ratio);
+        VoxelGradient c1 = interpolate(c01,c11, y_ratio);
+        
+        return interpolate(c0, c1, z_ratio);
+    }
   
     public void setGradient(int x, int y, int z, VoxelGradient value) {
         data[x + dimX * (y + dimY * z)] = value;
@@ -86,16 +115,30 @@ public class GradientVolume {
     }
 
     private void compute() {
-        /* To be implemented: compute the gradient of contained in the volume attribute */
-        for (int i=0; i<data.length; i++) {
+        for (int i = 0; i < data.length; i++) {
             data[i] = zero;
-        }   
-     
+        }
+        this.maxGradientMagnitude = 0;
+        for (int i = 1; i < volume.getDimX() - 1; i++) {
+            for (int j = 1; j < volume.getDimY() - 1; j++) {
+                for (int k = 1; k < volume.getDimZ() - 1; k++) {
+                    float gx = ((volume.getVoxel(i - 1, j, k) - volume.getVoxel(i + 1, j, k)) / 2.0f);
+                    float gy = ((volume.getVoxel(i, j - 1, k) - volume.getVoxel(i, j + 1, k)) / 2.0f);
+                    float gz = ((volume.getVoxel(i, j, k - 1) - volume.getVoxel(i, j, k + 1)) / 2.0f);
+
+                    VoxelGradient value = new VoxelGradient(gx, gy, gz);
+                    if (value.mag > this.maxGradientMagnitude) {
+                        this.maxGradientMagnitude = value.mag;
+                    }
+                    this.setGradient(i, j, k, value);
+                }
+            }
+        }
     }
     
     public double getMaxGradientMagnitude() {
         /* to be implemented: Returns the maximum gradient magnitude*/
-        return 0;
+        return this.maxGradientMagnitude;
     }
     
     private int dimX, dimY, dimZ;
@@ -103,4 +146,6 @@ public class GradientVolume {
     VoxelGradient[] data;
     Volume volume;
     double maxmag;
+    double maxGradientMagnitude;
+
 }

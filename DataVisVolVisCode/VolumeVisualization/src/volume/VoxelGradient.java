@@ -26,5 +26,4 @@ public class VoxelGradient {
         z = gz;
         mag = (float) Math.sqrt(x*x + y*y + z*z);
     }
-    
 }
