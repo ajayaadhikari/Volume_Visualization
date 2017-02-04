@@ -39,6 +39,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private boolean compositingMode = false;
     private boolean tf2dMode = false;
     private boolean shadingMode = false;
+    private boolean mipXray = true;
     
     public RaycastRenderer() {
         panel = new RaycastRendererPanel(this);
@@ -303,15 +304,25 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             }
         }
         
-        // Get the color of @maxValue
-        TFColor voxelColor = new TFColor(); 
-        voxelColor = tFunc.getColor(maxValue);
+        int c_alpha, c_red, c_green, c_blue;
+        if (mipXray){
+            c_alpha = maxValue;
+            c_red = 255;
+            c_green = 255;
+            c_blue = 255; 
+        }
+        else {
+            // Get the color of @maxValue
+            TFColor voxelColor = new TFColor(); 
+            voxelColor = tFunc.getColor(maxValue);
 
-        // BufferedImage expects a pixel color packed as ARGB in an int
-        int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
-        int c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
-        int c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
-        int c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
+            // BufferedImage expects a pixel color packed as ARGB in an int
+            c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
+            c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
+            c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
+            c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
+        }
+
         int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
         return pixelColor;
     }
@@ -409,6 +420,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                    }
                    else if(compositingMode) {
                        pixelColor = composite(entryPoint,exitPoint,viewVec, sampleStep);
+                   }
+                   else if(tf2dMode) {
+                       
+                   }
+                   else if(shadingMode){
+                       
                    }
                       
                     for (int ii = i; ii < i + increment; ii++) {
