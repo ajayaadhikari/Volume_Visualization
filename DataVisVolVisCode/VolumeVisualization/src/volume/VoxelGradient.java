@@ -26,4 +26,14 @@ public class VoxelGradient {
         z = gz;
         mag = (float) Math.sqrt(x*x + y*y + z*z);
     }
+    
+    public double[] normalize(){
+        double[] result = new double[] {x,y,z};
+        if (mag != 0){
+            result[0] = x/mag;
+            result[1] = y/mag;
+            result[2] = z/mag;
+        }
+        return result;
+    }
 }

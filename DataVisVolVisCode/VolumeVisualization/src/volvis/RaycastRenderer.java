@@ -41,6 +41,15 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private boolean shadingMode = false;
     private boolean mipXray = true;
     
+    // Shading constants
+    private float kAmbient = 0.1f;
+    private float kDiff = 0.7f;
+    private float kSpec = 0.2f;
+    private float alpha = 10;
+    private float iAmbient = 0f;
+    private float iDiff = 1f;
+    private float iSpec = 1f;
+    
     public RaycastRenderer() {
         panel = new RaycastRendererPanel(this);
         panel.setSpeedLabel("0");
@@ -400,7 +409,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             }
         }
 
-
         for (int j = 0; j < image.getHeight(); j += increment) {
             for (int i = 0; i < image.getWidth(); i += increment) {
                 // compute starting points of rays in a plane shifted backwards to a position behind the data set
@@ -422,7 +430,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                        pixelColor = composite(entryPoint,exitPoint,viewVec, sampleStep);
                    }
                    else if(tf2dMode) {
-                       
+                       pixelColor = tranferFuntion2D(entryPoint,exitPoint,viewVec, sampleStep);
                    }
                    else if(shadingMode){
                        
@@ -437,15 +445,91 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
 
             }
         }
+    }
+    
+    int tranferFuntion2D(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
+        //Get the user selected values
+        int selectedIntensity = tfEditor2D.triangleWidget.baseIntensity;
+        double selectedRadius = tfEditor2D.triangleWidget.radius;
+        TFColor selectedColor = tfEditor2D.triangleWidget.color;
+
+        VectorMath.normalize(viewVec);
+        double totalDistance = VectorMath.distance(entryPoint, exitPoint);
+        TFColor currentColor = new TFColor(); 
+        TFColor previousColor = new TFColor(0,0,0,0);
+        // Raycast through the volume starting from @exitPoint and ending at @entryPoint along the direction
+        // given by @viewVec with @sampleStep as sampling rate.
+        // We are sampeling back to front here.
+        for(double i = 0.0; true; i+=sampleStep){
+            double[] coordinate = VectorMath.add(exitPoint, VectorMath.scale(viewVec, i));
+
+            double distance = VectorMath.distance(exitPoint, coordinate);
+            if (distance > totalDistance){
+                break;
+            }
+            int currentValue = volume.getVoxelInterpolate(coordinate);
+            VoxelGradient gradient = gradients.getGradient(coordinate); 
+            currentColor.r = selectedColor.r;
+            currentColor.g = selectedColor.g;
+            currentColor.b = selectedColor.b;
+
+            if (currentValue == selectedIntensity && gradient.mag == 0) {
+                currentColor.a = selectedColor.a * 1.0;
+            }
+            else if (gradient.mag > 0.0 && 
+                    ((currentValue - selectedRadius * gradient.mag) <= selectedIntensity) &&
+                    ((currentValue + selectedRadius * gradient.mag) >= selectedIntensity))  {
+                currentColor.a = selectedColor.a*(1.0 - (1 / selectedRadius) * (Math.abs((selectedIntensity - currentValue)/ gradient.mag)));
+            }
+            else {
+                currentColor.a = 0.0;
+            }
+            if (shadingMode) 
+                getShade(viewVec, gradient, selectedColor, currentColor);
+
+            //currentColor = tFunc.getColor(currentValue);
+            previousColor.r = currentColor.a*currentColor.r + (1-currentColor.a) * previousColor.r;
+            previousColor.g = currentColor.a*currentColor.g + (1-currentColor.a) * previousColor.g;
+            previousColor.b = currentColor.a*currentColor.b + (1-currentColor.a) * previousColor.b;
+        }
+        previousColor.a = 1.0;
 
 
+        return getColor(previousColor);
+    }  
+    
+    void getShade(double[] viewVector, VoxelGradient gradient, TFColor selectedColor, TFColor resultingColor){
+        // We are taking the direction vector from the point on the suface 
+        // toward the light as the same as the viewVector
+        double[] lightDir = viewVector;        
+        // Normal at the point on the surface
+        double[] normal = gradient.normalize();
+        // Compute the direction that a perfectly reflected ray of light would take form the surface
+        double[] perfectReflectionDir = VectorMath.sub(VectorMath.scale(normal, 2 * (VectorMath.dotproduct(lightDir, normal))), lightDir) ;
+        
+        double K_a = kAmbient*iAmbient;
+        double K_d = VectorMath.dotproduct(lightDir, normal)* kDiff*iDiff;
+        double K_s = kSpec * Math.pow(VectorMath.dotproduct(perfectReflectionDir, viewVector), alpha);
+                
+        resultingColor.r = selectedColor.r * K_a + selectedColor.r * K_d + K_s;
+        resultingColor.g = selectedColor.g * K_a + selectedColor.g * K_d + K_s;
+        resultingColor.b = selectedColor.b * K_a + selectedColor.g * K_d + K_s; 
+    }
+    
+    int getColor(TFColor color){
+        // BufferedImage expects a pixel color packed as ARGB in an int
+        int c_alpha = color.a <= 1.0 ? (int) Math.floor(color.a * 255) : 255;
+        int c_red = color.r <= 1.0 ? (int) Math.floor(color.r * 255) : 255;
+        int c_green = color.g <= 1.0 ? (int) Math.floor(color.g * 255) : 255;
+        int c_blue = color.b <= 1.0 ? (int) Math.floor(color.b * 255) : 255;
+        return (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
     }
     
     int composite(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
 
         VectorMath.normalize(viewVec);
         double totalDistance = VectorMath.distance(entryPoint, exitPoint);
-        TFColor currentColor = new TFColor(); 
+        TFColor currentColor; 
         TFColor previousColor = new TFColor();
         // Raycast through the volume starting from @exitPoint and ending at @entryPoint along the direction
         // given by @viewVec with @sampleStep as sampling rate.
@@ -466,13 +550,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }
         previousColor.a = 1.0;
 
-        // BufferedImage expects a pixel color packed as ARGB in an int
-        int c_alpha = previousColor.a <= 1.0 ? (int) Math.floor(previousColor.a * 255) : 255;
-        int c_red = previousColor.r <= 1.0 ? (int) Math.floor(previousColor.r * 255) : 255;
-        int c_green = previousColor.g <= 1.0 ? (int) Math.floor(previousColor.g * 255) : 255;
-        int c_blue = previousColor.b <= 1.0 ? (int) Math.floor(previousColor.b * 255) : 255;
-        int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
-        return pixelColor;
+        return getColor(previousColor);
     }    
     
     /**
@@ -530,16 +608,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 // Alternatively, apply the transfer function to obtain a color
                 TFColor auxColor = new TFColor(); 
                 auxColor = tFunc.getColor(val);
-                voxelColor.r=auxColor.r;voxelColor.g=auxColor.g;voxelColor.b=auxColor.b;voxelColor.a=auxColor.a;
-                
-                
-                // BufferedImage expects a pixel color packed as ARGB in an int
-                int c_alpha = voxelColor.a <= 1.0 ? (int) Math.floor(voxelColor.a * 255) : 255;
-                int c_red = voxelColor.r <= 1.0 ? (int) Math.floor(voxelColor.r * 255) : 255;
-                int c_green = voxelColor.g <= 1.0 ? (int) Math.floor(voxelColor.g * 255) : 255;
-                int c_blue = voxelColor.b <= 1.0 ? (int) Math.floor(voxelColor.b * 255) : 255;
-                int pixelColor = (c_alpha << 24) | (c_red << 16) | (c_green << 8) | c_blue;
-                image.setRGB(i, j, pixelColor);
+
+                image.setRGB(i, j, getColor(voxelColor));
             }
         }
 
