@@ -46,9 +46,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private float kDiff = 0.7f;
     private float kSpec = 0.2f;
     private float alpha = 10;
-    private float iAmbient = 0f;
-    private float iDiff = 1f;
-    private float iSpec = 1f;
+    private float iAmbient = 0.5f;
+    private float iDiff = 0.5f;
+    private float iSpec = 0.3f;
     
     public RaycastRenderer() {
         panel = new RaycastRendererPanel(this);
@@ -396,12 +396,12 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double[] exitPoint = new double[3];
         
         int increment=1;
-        if (this.interactiveMode){
-            increment = 3;
-        }
         float sampleStep=0.2f;
-        
 
+        if (this.interactiveMode){
+            increment = 2;
+            sampleStep = 1f;
+        }
 
         for (int j = 0; j < image.getHeight(); j++) {
             for (int i = 0; i < image.getWidth(); i++) {
@@ -452,7 +452,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         int selectedIntensity = tfEditor2D.triangleWidget.baseIntensity;
         double selectedRadius = tfEditor2D.triangleWidget.radius;
         TFColor selectedColor = tfEditor2D.triangleWidget.color;
-
+        
         VectorMath.normalize(viewVec);
         double totalDistance = VectorMath.distance(entryPoint, exitPoint);
         TFColor currentColor = new TFColor(); 
@@ -493,8 +493,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             previousColor.b = currentColor.a*currentColor.b + (1-currentColor.a) * previousColor.b;
         }
         previousColor.a = 1.0;
-
-
         return getColor(previousColor);
     }  
     
@@ -509,11 +507,11 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         double K_a = kAmbient*iAmbient;
         double K_d = VectorMath.dotproduct(lightDir, normal)* kDiff*iDiff;
-        double K_s = kSpec * Math.pow(VectorMath.dotproduct(perfectReflectionDir, viewVector), alpha);
+        double K_s = kSpec*iSpec* Math.pow(VectorMath.dotproduct(perfectReflectionDir, viewVector), alpha);
                 
         resultingColor.r = selectedColor.r * K_a + selectedColor.r * K_d + K_s;
         resultingColor.g = selectedColor.g * K_a + selectedColor.g * K_d + K_s;
-        resultingColor.b = selectedColor.b * K_a + selectedColor.g * K_d + K_s; 
+        resultingColor.b = selectedColor.b * K_a + selectedColor.b * K_d + K_s; 
     }
     
     int getColor(TFColor color){
