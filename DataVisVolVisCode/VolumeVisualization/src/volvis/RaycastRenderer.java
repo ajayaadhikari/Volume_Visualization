@@ -42,9 +42,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private boolean mipXray = true;
     
     // Shading constants
-    private float kAmbient = 1f;//0.1f;
-    private float kDiff = 0f;
-    private float kSpec = 0f;
+    private float kAmbient = 0.0f;//0.1f;
+    private float kDiff = 0.0f;
+    private float kSpec = 1f;
     private float alpha = 10;
     private float iAmbient = 0.5f;
     private float iDiff = 1f;
@@ -291,9 +291,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
   
 
     int traceRayMIP(double[] entryPoint, double[] exitPoint, double[] viewVec, double sampleStep) {
-        /* to be implemented:  You need to sample the ray and implement the MIP
-         * right now it just returns yellow as a color
-        */
         VectorMath.normalize(viewVec);
         double totalDistance = VectorMath.distance(entryPoint, exitPoint);
         int maxValue = 0;
@@ -301,8 +298,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         // given by @viewVec with @sampleStep as sampling rate.
         for(double i = 0.0; true; i+=sampleStep){
             double[] coordinate = VectorMath.add(exitPoint, VectorMath.scale(viewVec, i));
+            // If the sample point is outside of the volume break
             double distance = VectorMath.distance(exitPoint, coordinate);
-            
             if (distance > totalDistance){
                 break;
             }
@@ -314,6 +311,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         }
         
         int c_alpha, c_red, c_green, c_blue;
+        // If xray mode is set, set the color as white
         if (mipXray){
             c_alpha = maxValue;
             c_red = 255;
@@ -377,10 +375,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     }
 
     void raycast(double[] viewMatrix) {
-        /* To be partially implemented:
-            This function traces the rays through the volume. Have a look and check that you understand how it works.
-            You need to introduce here the different modalities MIP/Compositing/TF2/ etc...*/
-
         double[] viewVec = new double[3];
         double[] uVec = new double[3];
         double[] vVec = new double[3];
@@ -397,7 +391,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         
         int increment=1;
         float sampleStep=0.2f;
-
+        
+        // Through experimentation, we decided to increase the sample step by five and we decrease the number of pixels by four, 
+        // to find a good balance between two. 
         if (this.interactiveMode){
             increment = 2;
             sampleStep = 1f;
@@ -422,7 +418,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                 computeEntryAndExit(pixelCoord, viewVec, entryPoint, exitPoint);
                 if ((entryPoint[0] > -1.0) && (exitPoint[0] > -1.0)) {
                     int pixelColor = 0;
-                    /* set color to green if MipMode- see slicer function*/
                    if(mipMode) {
                         pixelColor= traceRayMIP(entryPoint,exitPoint,viewVec,sampleStep);
                    }
@@ -459,7 +454,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         // We are sampeling back to front here.
         for(double i = 0.0; true; i+=sampleStep){
             double[] coordinate = VectorMath.add(exitPoint, VectorMath.scale(viewVec, i));
-
+            
+            // If this sample is beyond the exitPoint point break
             double distance = VectorMath.distance(exitPoint, coordinate);
             if (distance > totalDistance){
                 break;
@@ -469,7 +465,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             currentColor.r = selectedColor.r;
             currentColor.g = selectedColor.g;
             currentColor.b = selectedColor.b;
-
+            
+            // Use Levoy's formula to set the opacity of the current sample
             if (currentValue == selectedIntensity && gradient.mag == 0) {
                 currentColor.a = selectedColor.a * 1.0;
             }
@@ -484,7 +481,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
             if (shadingMode) 
                 getShade(viewVec, gradient, selectedColor, currentColor);
 
-            //currentColor = tFunc.getColor(currentValue);
             previousColor.r = currentColor.a*currentColor.r + (1-currentColor.a) * previousColor.r;
             previousColor.g = currentColor.a*currentColor.g + (1-currentColor.a) * previousColor.g;
             previousColor.b = currentColor.a*currentColor.b + (1-currentColor.a) * previousColor.b;
@@ -502,11 +498,16 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         // Compute the direction that a perfectly reflected ray of light would take form the surface
         double[] perfectReflectionDir = VectorMath.sub(VectorMath.scale(normal, 2 * (VectorMath.dotproduct(lightDir, normal))), lightDir) ;
         
+        double normalLightDot = VectorMath.dotproduct(lightDir, normal);
+        
+        // The constants are defined at the beginning of the file
         double K_a = kAmbient*iAmbient;
-        double K_d = kDiff*iDiff*VectorMath.dotproduct(lightDir, normal);
+        double K_d = kDiff*iDiff* normalLightDot;
         double K_s = kSpec*iSpec* Math.pow(VectorMath.dotproduct(perfectReflectionDir, viewVector), alpha);
         
-        if (K_d <= 0 && (K_d != 0 || K_s !=0)){
+        // If the angle between the normal and the direction of the light greater than 180 degrees, then no light falls on the surface
+        // In this case the opacity of this point is set to zero.
+        if (normalLightDot <= 0){
             resultingColor.a = 0;
         }
         else{
