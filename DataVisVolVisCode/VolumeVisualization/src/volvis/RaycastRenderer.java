@@ -42,9 +42,9 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private boolean mipXray = true;
     
     // Shading constants
-    private float kAmbient = 0.1f;
-    private float kDiff = 0.7f;
-    private float kSpec = 0.2f;
+    private float kAmbient = 1f;//0.1f;
+    private float kDiff = 0f;
+    private float kSpec = 0f;
     private float alpha = 10;
     private float iAmbient = 0.5f;
     private float iDiff = 1f;
@@ -506,7 +506,7 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double K_d = kDiff*iDiff*VectorMath.dotproduct(lightDir, normal);
         double K_s = kSpec*iSpec* Math.pow(VectorMath.dotproduct(perfectReflectionDir, viewVector), alpha);
         
-        if (K_d <= 0){
+        if (K_d <= 0 && (K_d != 0 || K_s !=0)){
             resultingColor.a = 0;
         }
         else{
