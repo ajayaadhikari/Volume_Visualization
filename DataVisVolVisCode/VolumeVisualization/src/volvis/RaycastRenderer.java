@@ -47,8 +47,8 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
     private float kSpec = 0.2f;
     private float alpha = 10;
     private float iAmbient = 0.5f;
-    private float iDiff = 0.5f;
-    private float iSpec = 0.3f;
+    private float iDiff = 1f;
+    private float iSpec = 1f;
     
     public RaycastRenderer() {
         panel = new RaycastRendererPanel(this);
@@ -432,9 +432,6 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
                    else if(tf2dMode) {
                        pixelColor = tranferFuntion2D(entryPoint,exitPoint,viewVec, sampleStep);
                    }
-                   else if(shadingMode){
-                       
-                   }
                       
                     for (int ii = i; ii < i + increment; ii++) {
                         for (int jj = j; jj < j + increment; jj++) {
@@ -506,13 +503,19 @@ public class RaycastRenderer extends Renderer implements TFChangeListener {
         double[] perfectReflectionDir = VectorMath.sub(VectorMath.scale(normal, 2 * (VectorMath.dotproduct(lightDir, normal))), lightDir) ;
         
         double K_a = kAmbient*iAmbient;
-        double K_d = VectorMath.dotproduct(lightDir, normal)* kDiff*iDiff;
+        double K_d = kDiff*iDiff*VectorMath.dotproduct(lightDir, normal);
         double K_s = kSpec*iSpec* Math.pow(VectorMath.dotproduct(perfectReflectionDir, viewVector), alpha);
-                
-        resultingColor.r = selectedColor.r * K_a + selectedColor.r * K_d + K_s;
-        resultingColor.g = selectedColor.g * K_a + selectedColor.g * K_d + K_s;
-        resultingColor.b = selectedColor.b * K_a + selectedColor.b * K_d + K_s; 
-    }
+        
+        if (K_d <= 0){
+            resultingColor.a = 0;
+        }
+        else{
+            resultingColor.r = selectedColor.r * K_a + selectedColor.r * K_d + K_s;
+            resultingColor.g = selectedColor.g * K_a + selectedColor.g * K_d + K_s;
+            resultingColor.b = selectedColor.b * K_a + selectedColor.b * K_d + K_s; 
+  
+        }
+   }
     
     int getColor(TFColor color){
         // BufferedImage expects a pixel color packed as ARGB in an int

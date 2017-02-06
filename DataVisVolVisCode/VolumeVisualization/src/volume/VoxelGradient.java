@@ -30,9 +30,9 @@ public class VoxelGradient {
     public double[] normalize(){
         double[] result = new double[] {x,y,z};
         if (mag != 0){
-            result[0] = x/mag;
-            result[1] = y/mag;
-            result[2] = z/mag;
+            result[0] = (double)(x/mag);
+            result[1] = (double)(y/mag);
+            result[2] = (double)(z/mag);
         }
         return result;
     }
