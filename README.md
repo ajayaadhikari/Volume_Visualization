@@ -1,37 +1,37 @@
-## Welcome to GitHub Pages
+This repository contains the code for the second assignment of the TU Delft course called Data Visualization (IN4086).
+It uses different volume visualization techniques to visualize volume data.
+This was in collaboration with [@MiliasV](https://github.com/MiliasV) and [@viveksubramanian](https://github.com/viveksubramanian).
 
-You can use the [editor on GitHub](https://github.com/ajayaadhikari/Volume_Visualization/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+# Results
+Here are some cool examples of the result.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+![Figure 1](/images/carp-xray2.png)
 
-### Markdown
+**Figure 1: MIP / carp dataset  (x-ray mode)**
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+![Figure 2](/images/mip-tf-carp.png)
 
-```markdown
-Syntax highlighted code block
+**Figure 3: MIP / carp dataset (tf- mode) / minimum density mapped to light blue (environment), the skin is mapped to black and the skeleton is mapped to white**
 
-# Header 1
-## Header 2
-### Header 3
 
-- Bulleted
-- List
+![Figure 3](/images/bonsai-mip-tf.png)
 
-1. Numbered
-2. List
+**Figure 3: MIP of the orange dataset from different angles**
 
-**Bold** and _Italic_ and `Code` text
+![Figure 4](/images/pig-comp.png)
 
-[Link](url) and ![Image](src)
-```
+**Figure 4:  Compositing / Pig / Edited  transfer function**
+pig-comp.png
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
 
-### Jekyll Themes
+![Figure 5](/images/2d-carp.png)
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/ajayaadhikari/Volume_Visualization/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+**Figure 5:  2D - Transfer Function / Carp / Edited  transfer function**
 
-### Support or Contact
+![Figure 6](/images/carp-all-2d.png)
 
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+**Figure 6: 2D - Transfer Function / Carp dataset / Ambient-Diffusion-Specular**
+
+![Figure 7](/images/pig-2d.png)
+
+**Figure 7: 2D - Transfer Function / Pig dataset **
