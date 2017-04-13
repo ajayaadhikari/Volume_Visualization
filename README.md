@@ -34,4 +34,4 @@ pig-comp.png
 
 ![Figure 7](/images/pig-2d.png)
 
-**Figure 7: 2D - Transfer Function / Pig dataset **
+**Figure 7: 2D - Transfer Function / Pig dataset**
